@@ -1,5 +1,11 @@
 #include "hw5.h"
 
+/**
+ * @brief Counts number of lines in a file
+ *
+ * @param filename Name of the file
+ * @return int Number of lines
+ */
 int countLines(const char *filename)
 {
     FILE *file = fopen(filename, "r");
@@ -31,24 +37,14 @@ int countLines(const char *filename)
     return count;
 }
 
-int slice_string(char *src, size_t start, size_t end)
-{
-    // Validate the slice indices
-    if (start > end || end >= strlen(src))
-    {
-        return -1; // Error
-    }
-
-    size_t j = 0;
-    for (size_t i = start; i < end; i++)
-    {
-        src[j++] = src[i];
-    }
-    src[j] = '\0'; // Terminate the modified string
-
-    return 0; // Success
-}
-
+/**
+ * @brief Checks if argv contains a specific flag
+ *
+ * @param argc Number of commandline arguments
+ * @param argv Commandline arguments
+ * @param flag Flag to check
+ * @return int 1 if flag exists 0 if doesn't
+ */
 int contains(int argc, const char *argv[], char *flag)
 {
     for (int i = 0; i < argc; i++)
@@ -65,6 +61,13 @@ int is_word_boundary(char c);
 int match_prefix(const char *str, const char *prefix);
 int match_suffix(const char *str, const char *suffix);
 
+/**
+ * @brief Checks for a wildcard and then replaces specified word with a particular word
+ *
+ * @param line Line to search word in
+ * @param search_text Word to search for
+ * @param replacement Word to replace the search word with
+ */
 void wildcard_replace(char *line, const char *search_text, const char *replacement)
 {
     const char *wildcard_pos = strchr(search_text, '*');
@@ -80,44 +83,47 @@ void wildcard_replace(char *line, const char *search_text, const char *replaceme
     {
         while (*word_start && is_word_boundary(*word_start))
         {
-            *output++ = *word_start++; // Copy non-word characters
+            *output++ = *word_start++;
         }
 
         if (*word_start == '\0')
-            break; // End of line
+            break;
 
-        // Find the end of the word
         word_end = word_start;
         while (*word_end && !is_word_boundary(*word_end))
         {
             word_end++;
         }
 
-        // Temporarily terminate the current word
         char temp = *word_end;
         *word_end = '\0';
 
-        // Perform replacement if the current word matches
         if ((prefix_search && match_prefix(word_start, search_text)) ||
             (suffix_search && match_suffix(word_start, search_text)))
         {
-            output += sprintf(output, "%s", replacement); // Replace word
+            output += sprintf(output, "%s", replacement);
         }
         else
         {
-            output += sprintf(output, "%s", word_start); // Copy word unchanged
+            output += sprintf(output, "%s", word_start);
         }
 
-        *word_end = temp;      // Restore original character
-        word_start = word_end; // Move to the next word
+        *word_end = temp;
+        word_start = word_end;
     }
 
-    *output = '\0'; // Null-terminate the buffer
-
-    // Now, copy the modified line back to the original line buffer
+    *output = '\0';
     strcpy(line, buffer);
 }
 
+/**
+ * @brief Normal replacing a specific word with a particular word
+ *
+ * @param source Line
+ * @param substring Substring to checl
+ * @param with Word to replace with
+ * @return char* The string after the word is replaced
+ */
 char *string_replace(char *source, char *substring, char *with)
 {
     char *substring_source = strstr(source, substring);
@@ -135,17 +141,38 @@ char *string_replace(char *source, char *substring, char *with)
     return substring_source + strlen(with);
 }
 
+/**
+ * @brief Checks if a word is space or punctuation or at boundry
+ *
+ * @param c Character to check
+ * @return int 1 if it is and 0 if it is not
+ */
 int is_word_boundary(char c)
 {
+    // Checking Boundary element
     return isspace((unsigned char)c) || ispunct((unsigned char)c) || c == '\0';
 }
 
+/**
+ * @brief Checks for specific prefix in a word
+ *
+ * @param str word to check
+ * @param prefix prefix to look for
+ * @return int if found then 1 or else 0
+ */
 int match_prefix(const char *str, const char *prefix)
 {
     // Match if the string starts with the prefix, ignoring the asterisk at the end
     return strncmp(str, prefix, strlen(prefix) - 1) == 0;
 }
 
+/**
+ * @brief Checks for specific suffix in a word
+ *
+ * @param str word to check
+ * @param suffix suffic to look for
+ * @return int if found then 1 or else 0
+ */
 int match_suffix(const char *str, const char *suffix)
 {
     // Match if the string ends with the suffix, ignoring the asterisk at the beginning
@@ -156,6 +183,8 @@ int match_suffix(const char *str, const char *suffix)
 
 int main(int argc, char *argv[])
 {
+
+    // Error handling....
     int opt;
     char *sArguments = NULL;
     char *rArguments = NULL;
@@ -210,7 +239,7 @@ int main(int argc, char *argv[])
             }
             break;
         default:
-            // Handle unexpected options
+            // Handle unexpected options and ignoring
             break;
         }
     }
@@ -327,8 +356,6 @@ int main(int argc, char *argv[])
 
         while (fgets(bfr, 1000, fptr) != NULL)
         {
-            if (lines == 1)
-                printf("%");
             if (lines >= minimum && lines <= maximum)
             {
                 while (string_replace(bfr, sArguments, rArguments))
