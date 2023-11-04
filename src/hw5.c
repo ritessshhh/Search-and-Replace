@@ -1,5 +1,9 @@
 #include "hw5.h"
 
+int is_word_boundary(char c);
+int match_prefix(const char *str, const char *prefix);
+int match_suffix(const char *str, const char *suffix);
+
 /**
  * @brief Counts number of lines in a file
  *
@@ -57,9 +61,93 @@ int contains(int argc, const char *argv[], char *flag)
     return 0;
 }
 
-int is_word_boundary(char c);
-int match_prefix(const char *str, const char *prefix);
-int match_suffix(const char *str, const char *suffix);
+/**
+ * @brief Checks if a word is space or punctuation or at boundry
+ *
+ * @param c Character to check
+ * @return int 1 if it is and 0 if it is not
+ */
+int is_word_boundary(char c)
+{
+    return isspace((unsigned char)c) || ispunct((unsigned char)c) || c == '\0';
+}
+
+/**
+ * @brief Checks for specific prefix in a word
+ *
+ * @param str word to check
+ * @param prefix prefix to look for
+ * @return int if found then 1 or else 0
+ */
+int match_prefix(const char *str, const char *prefix)
+{
+    return strncmp(str, prefix, strlen(prefix) - 1) == 0;
+}
+
+/**
+ * @brief Checks for specific suffix in a word
+ *
+ * @param str word to check
+ * @param suffix suffic to look for
+ * @return int if found then 1 or else 0
+ */
+int match_suffix(const char *str, const char *suffix)
+{
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix) - 1;
+    return str_len >= suffix_len && strcmp(str + str_len - suffix_len, suffix + 1) == 0;
+}
+
+/**
+ * @brief Copies non-word characters from the word start pointer to the output pointer.
+ * @param output Pointer to a pointer of the destination where non-word characters will be copied to.
+ * @param word_start Pointer to a pointer of the source where non-word characters are copied from.
+ */
+void copy_non_word_characters(char **output, char **word_start)
+{
+    while (**word_start && is_word_boundary(**word_start))
+    {
+        *(*output)++ = *(*word_start)++; // Copy non-word characters
+    }
+}
+
+/**
+ * @brief Temporarily terminates a word by placing a null terminator at the word end.
+ * @param word_end Pointer to the end of the word which will be temporarily null-terminated.
+ * @return The original character that was at the word end before null-termination.
+ */
+
+char temporarily_terminate_word(char *word_end)
+{
+    char temp = *word_end;
+    *word_end = '\0';
+    return temp;
+}
+
+/**
+ * @brief Restores the original character at the end of a word after a temporary null termination.
+ *
+ * @param word_end Pointer to the end of the word where the original character is to be restored.
+ * @param original_char The original character to be restored at the word end.
+ */
+
+void restore_original_character(char *word_end, char original_char)
+{
+    *word_end = original_char;
+}
+
+/**
+ * @brief Performs the replacement of a word by copying the replacement text to the output.
+ *
+ * @param output Pointer to a pointer of the destination where the replacement text will be copied.
+ * @param word_start Pointer to the start of the word in the original text (unused in this function).
+ * @param replacement The replacement text that will be copied to the output.
+ */
+
+void perform_replacement(char **output, const char *word_start, const char *replacement)
+{
+    *output += sprintf(*output, "%s", replacement); // Replace word
+}
 
 /**
  * @brief Checks for a wildcard and then replaces specified word with a particular word
@@ -71,23 +159,19 @@ int match_suffix(const char *str, const char *suffix);
 void wildcard_replace(char *line, const char *search_text, const char *replacement)
 {
     const char *wildcard_pos = strchr(search_text, '*');
-
     int prefix_search = (wildcard_pos == search_text + strlen(search_text) - 1);
     int suffix_search = (wildcard_pos == search_text);
-    char buffer[1024]; // Make sure this is large enough for your input line
+    char buffer[1024];
     char *output = buffer;
     char *word_start = line;
     char *word_end;
 
     while (*word_start)
     {
-        while (*word_start && is_word_boundary(*word_start))
-        {
-            *output++ = *word_start++;
-        }
+        copy_non_word_characters(&output, &word_start);
 
         if (*word_start == '\0')
-            break;
+            break; // End of line
 
         word_end = word_start;
         while (*word_end && !is_word_boundary(*word_end))
@@ -95,25 +179,24 @@ void wildcard_replace(char *line, const char *search_text, const char *replaceme
             word_end++;
         }
 
-        char temp = *word_end;
-        *word_end = '\0';
+        char temp = temporarily_terminate_word(word_end);
 
         if ((prefix_search && match_prefix(word_start, search_text)) ||
             (suffix_search && match_suffix(word_start, search_text)))
         {
-            output += sprintf(output, "%s", replacement);
+            perform_replacement(&output, word_start, replacement);
         }
         else
         {
-            output += sprintf(output, "%s", word_start);
+            output += sprintf(output, "%s", word_start); // Copy word unchanged
         }
 
-        *word_end = temp;
-        word_start = word_end;
+        restore_original_character(word_end, temp);
+        word_start = word_end; // Move to the next word
     }
 
-    *output = '\0';
-    strcpy(line, buffer);
+    *output = '\0';       // Null-terminate the buffer
+    strcpy(line, buffer); // Now, copy the modified line back to the original line buffer
 }
 
 /**
@@ -139,46 +222,6 @@ char *string_replace(char *source, char *substring, char *with)
 
     memcpy(substring_source, with, strlen(with));
     return substring_source + strlen(with);
-}
-
-/**
- * @brief Checks if a word is space or punctuation or at boundry
- *
- * @param c Character to check
- * @return int 1 if it is and 0 if it is not
- */
-int is_word_boundary(char c)
-{
-    // Checking Boundary element
-    return isspace((unsigned char)c) || ispunct((unsigned char)c) || c == '\0';
-}
-
-/**
- * @brief Checks for specific prefix in a word
- *
- * @param str word to check
- * @param prefix prefix to look for
- * @return int if found then 1 or else 0
- */
-int match_prefix(const char *str, const char *prefix)
-{
-    // Match if the string starts with the prefix, ignoring the asterisk at the end
-    return strncmp(str, prefix, strlen(prefix) - 1) == 0;
-}
-
-/**
- * @brief Checks for specific suffix in a word
- *
- * @param str word to check
- * @param suffix suffic to look for
- * @return int if found then 1 or else 0
- */
-int match_suffix(const char *str, const char *suffix)
-{
-    // Match if the string ends with the suffix, ignoring the asterisk at the beginning
-    size_t str_len = strlen(str);
-    size_t suffix_len = strlen(suffix) - 1; // Exclude the asterisk
-    return str_len >= suffix_len && strcmp(str + str_len - suffix_len, suffix + 1) == 0;
 }
 
 int main(int argc, char *argv[])
